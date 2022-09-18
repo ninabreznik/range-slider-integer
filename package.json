@@ -23,7 +23,7 @@
     "budo": "^11.7.0"
   },
   "dependencies": {
-    "input-integer-ui": "^0.0.3",
-    "range-slider-ui": "^0.0.1"
+    "input-integer-ui": "^0.0.4",
+    "range-slider-ui": "^0.0.2"
   }
 }

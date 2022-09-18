@@ -1,13 +1,35 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+const range_slider_integer = require('..')
+
+const opts = { min: 0, max: 10 }
+const rsi = range_slider_integer(opts)
+
+document.body.append(rsi)
+
+
+
+},{"..":4}],2:[function(require,module,exports){
 module.exports = inputInteger
 
 const sheet = new CSSStyleSheet
 const theme = get_theme()
 sheet.replaceSync(theme)
 
-function inputInteger (opts, notify) {
-  debugger
+var id = 0
+
+function inputInteger (opts, protocol) {
   const { min = 0, max = 1000 } = opts
+
+  const name = `input-integer-${id++}`
+
+  const notify = protocol({ from: name }, listen)
+  function listen (message) {
+    const { type, data } = message
+    if (type === 'update') {
+      input.value = data
+    }
+  }
+
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
@@ -30,10 +52,10 @@ function inputInteger (opts, notify) {
     const val_len = val.toString().length // e.target.value.length
     const min_len = min.toString().length
   
-    if (val > max) input.value = ''
-    else if (val_len === min_len && val < min) input.value = ''
+    if (val > max) input.value = max
+    else if (val_len === min_len && val < min) input.value = min
   
-    notify({ type: 'update', body: val })
+    notify({ from: name, type: 'update', data: val })
   }
   
   function handle_onmouseleave_and_blur (e, input, min) {
@@ -85,48 +107,25 @@ function get_theme () {
 
 
 
-},{}],2:[function(require,module,exports){
-const range_slider_integer = require('..')
-
-const opts = { min: 0, max: 10 }
-const rsi = range_slider_integer(opts)
-
-document.body.append(rsi)
-
-
-
-},{"..":3}],3:[function(require,module,exports){
-const range = require('range-slider-ui')
-const integer = require('input-integer-ui')
-
-module.exports = range_slider_integer
-
-function range_slider_integer (opts) {
-  
-  const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
-  
-  const range_slider = range(opts, listen)
-  const input_integer = integer(opts, listen)
-
-  const output = document.createElement('div')
-  output.innerText = 0
-
-  shadow.append(range_slider, input_integer, output)
-
-  return el
-
-  function listen (message) {
-    const { type, body } = message
-    if (type === 'update') output.innerText = body
-  }
-
-}
-},{"input-integer-ui":1,"range-slider-ui":4}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 module.exports = rangeSlider
 
-function rangeSlider (opts, notify) {
+var id = 0
+
+function rangeSlider (opts, protocol) {
   const { min = 0, max = 1000 } = opts
+  const name = `range-${id++}`
+
+  const notify = protocol({ from: name }, listen)
+
+  function listen (message) {
+    const { type, data } = message
+    if (type === 'update') {
+      input.value = data
+      fill.style.width = `${(data/max)*100}%`
+      input.focus()
+    }
+  }
 
   const el = document.createElement('div')
   el.classList.add('container')
@@ -161,7 +160,7 @@ function rangeSlider (opts, notify) {
   function handle_input (e) {
     const val = Number(e.target.value)
     fill.style.width = `${(val/max)*100}%`
-    notify({ type: 'update', body: val })
+    notify({ from: name, type: 'update', data: val })
   }
 }
 
@@ -256,4 +255,61 @@ function get_theme () {
   }
   `
 }
-},{}]},{},[2]);
+},{}],4:[function(require,module,exports){
+const range = require('range-slider-ui')
+const integer = require('input-integer-ui')
+
+module.exports = range_slider_integer
+
+function range_slider_integer (opts) {
+  const state = {}
+  
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  const rsi = document.createElement('div')
+  rsi.classList.add('rsi')
+  
+  const range_slider = range(opts, protocol)
+  const input_integer = integer(opts, protocol)
+
+  rsi.append(range_slider, input_integer)
+
+  const style = document.createElement('style')
+  style.textContent = get_theme()
+
+  shadow.append(rsi, style)
+
+  return el
+
+  function protocol (message, notify) {
+    const { from } = message
+    state[from] = { value: 0, notify }
+    return listen
+  }
+
+  function listen (message) {
+    const { from, type, data } = message
+    state[from].value = data
+    if (type === 'update') {
+      var notify
+      if (from === 'range-0') notify = state['input-integer-0'].notify
+      else if (from === 'input-integer-0') notify = state['range-0'].notify
+      notify({ type, data })
+    }
+  }
+
+  function get_theme () {
+    return `
+      .rsi {
+        padding: 5%;
+        display: grid;
+        grid-template-columns: 8fr 1fr;
+        align-items: center;
+        justify-items: center;
+      }
+    `
+  }
+
+}
+},{"input-integer-ui":2,"range-slider-ui":3}]},{},[1]);
